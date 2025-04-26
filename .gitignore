@@ -1,0 +1,17 @@
+# OpenSCAD specific
+export/*.stl
+export/*.3mf
+export/*.amf
+export/*.dxf
+export/*.svg
+export/*.csg
+export/*.echo
+export/*.log
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE specific
+.vscode/
+.idea/ 
