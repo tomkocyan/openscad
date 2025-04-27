@@ -4,6 +4,13 @@ This is my playground for 3D modeling experiments using OpenSCAD. The project co
 
 ## Current Models
 
+### 10 CZK Coin
+A model of a 10 CZK coin designed for toy carts:
+- Accurate dimensions (24.5 mm diameter, 2.55 mm thickness)
+- Embossed number "10" with rounded font
+- Raised edge for better grip
+- Optimized for 3D printing
+
 ### 5 CZK Coin
 A model of a 5 CZK coin designed for toy carts:
 - Accurate dimensions (23 mm diameter, 1.85 mm thickness)
