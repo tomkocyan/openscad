@@ -1,0 +1,1 @@
+text("RÍŠA & BÁJA", 20, halign = "center", valign="center", font="DIN:style=bold");

@@ -3,7 +3,7 @@
 // or you need to specify the full path to the file
 
 // Icon parameters
-icon_filename = "icons/envelope-solid.svg"; // Name of the SVG icon file
+icon_filename = "icons/house-solid.svg"; // Name of the SVG icon file
 max_size = 30; // Maximum size of the image in mm
 
 // Height parameters
