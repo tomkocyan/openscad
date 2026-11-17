@@ -1,6 +1,14 @@
-# OpenSCAD 3D Models
+# OpenSCAD
 
-This is my playground for 3D modeling experiments using OpenSCAD. The project contains various designs that can be customized with different parameters and icons.
+Parametric models. 3D-print files are in `3D Print`, laser-cut files are in `laser`.
+
+## Laser
+
+### Box
+An open plywood box (no lid) with finger joints:
+- Outer size, thickness, kerf, joint clearance, and finger width are parameters
+- Flat layout exports to DXF or SVG for the laser
+- Turn the flat layout off to preview the assembled box
 
 ## Current Models
 
@@ -27,10 +35,10 @@ A customizable keychain with:
 
 ## Usage
 
-1. Open desired `.scad` file in OpenSCAD
-2. Adjust parameters to your liking
-3. Render and export to STL
-4. 3D print your custom model
+1. Open the `.scad` file in OpenSCAD
+2. Adjust parameters in the Customizer
+3. For 3D print, render and export STL
+4. For laser, keep the flat layout on and export DXF or SVG
 
 ## Parameters
 
