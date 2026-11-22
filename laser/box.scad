@@ -9,7 +9,7 @@
 // Do výkresu se plošný vzor dá vpravo od dílů, ať ho řez nepohltí. Posun na díl
 // a vrstva gravírování jsou v logu.
 //
-// Kerf, tloušťka, vůle spoje a mezery na desce jsou v settings.scad.
+// Kerf, tloušťka a proč víčko lepit jsou v settings.scad. Tady to neměň.
 
 include <settings.scad>
 

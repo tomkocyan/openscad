@@ -3,7 +3,8 @@
 // Každý zářez je kompenzovaný svým číslem. Do něj zastrč hranu téže desky.
 // Prostřední zářez používá kerf z nastavení. Doleva je volnější, doprava těsnější.
 // Čísla jsou vyříznutá v dílu. V LightBurnu nech kerf na nule.
-// Tloušťku v nastavení nastav na změřenou desku, jinak sedne jiný zářez než čtverec.
+// Tahle deska už je změřená: 3,33 mm, čtverec 49,85 mm, v settings je kerf 0,17.
+// Novou desku změř znovu a výsledek zapiš do settings.scad, ne sem.
 
 include <settings.scad>
 

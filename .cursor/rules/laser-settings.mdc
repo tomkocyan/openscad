@@ -1,13 +1,21 @@
 ---
-description: Tloušťka, kerf a mezery laseru jsou jen v settings.scad
+description: Změřený kerf, tloušťka překližky a to, že víčko se lepí
 globs: laser/**/*.scad
 alwaysApply: false
 ---
 
-# Parametry laseru
+# Laser a překližka
 
-Tloušťka, kerf, vůle spoje a mezery na desce jsou jen v `laser/settings.scad`. Modely je berou přes `include <settings.scad>`.
+AlgoLaser 20W, dioda. Kompenzace je v OpenSCAD. V LightBurnu nech kerf na nule.
 
-Do modelu je nekopíruj. Customizer modelu je neukáže a tak to má zůstat. Změna se dělá v `settings.scad`.
+`kerf` je celá šířka řezu, obrys se posouvá o `kerf/2`. Menší kerf je volnější spoj, větší je těsnější. Na boxes.py je `burn` jen polovina řezu: burn 0,1 = náš kerf 0,2. Ten burn byl občas na krev, jako náš kerf ho neber.
 
-V logu modelu zavolej `log_laser()`, ať je tloušťka, kerf a vůle spoje vidět u rozměrů.
+Změřeno na této desce, hodnoty jsou v `laser/settings.scad`:
+
+- tloušťka 3,33 mm
+- čtverec 50 mm bez kompenzace vyšel 49,85 mm, surový kerf je 0,15 mm
+- v souboru je kerf 0,17, o 0,02 víc, ať krabička drží rukou, než chytne lepidlo
+
+Pevnost dělá lepidlo. Tření jen drží díly při lepení. Víčko má krátký lem a málo zubů, samo nedrží a lepí se. `lid_press` nech na 0 a kerf kvůli víčku nezvedej.
+
+Tloušťku, kerf, vůli spoje a mezery nekopíruj do modelu. Customizer modelu je neukáže. Změna patří do `settings.scad`. V logu modelu zavolej `log_laser()`. `pattern.scad` laser nezná.

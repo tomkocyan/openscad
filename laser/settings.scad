@@ -1,11 +1,18 @@
 // Jediné místo pro tloušťku, kerf a mezery na desce. Jednotky jsou milimetry.
 // Modely to vloží přes include <settings.scad>. V jejich Customizeru se to neukáže.
+//
+// AlgoLaser 20W. Kompenzace je tady, v LightBurnu nech kerf na nule.
+// kerf je celá šířka řezu. Menší kerf je volnější spoj, větší je těsnější.
+// boxes.py burn je polovina řezu. burn 0,1 = kerf 0,2 a ten byl občas na krev.
+// Čtverec 50 mm bez kompenzace vyšel 49,85 mm, surový řez je 0,15 mm.
+// Kerf 0,17 je o 0,02 víc, ať krabička drží rukou, než chytne lepidlo.
+// Pevnost dělá lepidlo. Víčko má krátký lem, samo nedrží a lepí se. lid_press nech 0.
 
 /* [Materiál a laser] */
-// Tloušťka překližky v mm. Změřená deska.
+// Tloušťka překližky v mm. Změřená deska, 22. 11. 2026.
 thickness = 3.33; // [1:0.01:8]
 
-// Šířka řezu v mm. Čtverec dal 0,15. O dvě setiny víc, ať spoj drží i bez lepidla.
+// Šířka řezu v mm. Změřeno 0,15, nastaveno 0,17, ať spoj drží při lepení.
 kerf = 0.17; // [0:0.01:0.4]
 
 // O kolik je zářez širší než prst, v mm. 0 je těsný spoj po kompenzaci kerfu.
