@@ -1,0 +1,13 @@
+---
+description: Tloušťka, kerf a mezery laseru jsou jen v settings.scad
+globs: laser/**/*.scad
+alwaysApply: false
+---
+
+# Parametry laseru
+
+Tloušťka, kerf, vůle spoje a mezery na desce jsou jen v `laser/settings.scad`. Modely je berou přes `include <settings.scad>`.
+
+Do modelu je nekopíruj. Customizer modelu je neukáže a tak to má zůstat. Změna se dělá v `settings.scad`.
+
+V logu modelu zavolej `log_laser()`, ať je tloušťka, kerf a vůle spoje vidět u rozměrů.
