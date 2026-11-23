@@ -606,7 +606,9 @@ if (round_corners && corner_radius > corner_r + 0.05)
         " mm, ať se rohy na konci žebra neslijí."));
 for (i = [0:center_count - 1])
     echo(str("Střed ", i + 1, ": výška ", mm(center_height(i)),
-        " mm, světlost ", mm(2 * rib_end_radius(i)), " mm"));
+        " mm, světlost ", mm(2 * rib_end_radius(i)), " mm",
+        ring_solid(i) ? "" : str(", vnitřní průměr ",
+            mm(2 * (ring_outer_radius(i) - ring_width_of(i))), " mm")));
 if (flat_layout)
     echo(str("Deska žeber ", mm(sheet_ribs_width()), " × ", mm(sheet_ribs_height()),
         " mm, řada prstenců široká ", mm(rings_width()), " mm"));
