@@ -56,7 +56,7 @@ show_parts = "oboji"; // [zebra, rafky, oboji]
 // Žebro je tam jen jedno, jsou všechna stejná. Ráfky jsou všechny, liší se.
 flat_layout = false;
 
-// Křížek 10 mm ve středu každého kruhu na desce. Vypni, když značky nechceš.
+// Křížek 10 mm a čárky tam, kde po zasunutí končí žebro.
 mark_centers = true;
 
 /* [Hidden] */
@@ -354,6 +354,12 @@ function notch_mid_x(i) = notch_x(i) - center_notch(i) / 2;
 // Vnější poloměr prstence. Po natočení leží na vnějším konci zapuštění.
 function ring_outer_radius(i) = rib_radial(notch_x(i));
 
+// Kam dosáhne zářez žebra. Z průměru se tím odečte zámek z obou stran.
+function ring_seat_radius(i) = rib_radial(notch_mid_x(i));
+
+// Vnitřní hrana žebra po úplném zasunutí do prstence.
+function rib_end_radius(i) = rib_radial(inner_x(center_height(i)));
+
 function rib_span_x() = max_outer_radius() - min_inner_radius();
 
 // Svislá osa, kolem které se žebro naklopí. Vnitřní hrana zůstane na místě.
@@ -378,6 +384,19 @@ function rings_width() =
     + [for (i = [0:center_count - 1]) 2 * ring_outer_radius(i)]
         * [for (i = [0:center_count - 1]) 1]
     + (center_count - 1) * part_gap;
+
+function ring_row_y() =
+    show_ribs()
+        ? sheet_ribs_height() - sheet_margin + part_gap
+        : sheet_margin;
+
+function ring_place_x(i) =
+    let(previous = i == 0 ? 0
+        : [for (k = [0:i - 1]) 2 * ring_outer_radius(k) + part_gap]
+            * [for (k = [0:i - 1]) 1])
+    sheet_margin + ring_outer_radius(i) + previous;
+
+function ring_place_y(i) = ring_row_y() + ring_outer_radius(i);
 
 function notch_band() = thickness + joint_clearance;
 
@@ -587,9 +606,7 @@ if (round_corners && corner_radius > corner_r + 0.05)
         " mm, ať se rohy na konci žebra neslijí."));
 for (i = [0:center_count - 1])
     echo(str("Střed ", i + 1, ": výška ", mm(center_height(i)),
-        " mm, průměr ", mm(2 * ring_outer_radius(i)),
-        " mm, zapuštění ", mm(center_notch(i)),
-        " mm, ", ring_solid(i) ? "plný" : str("věnec ", mm(ring_width_of(i)), " mm")));
+        " mm, světlost ", mm(2 * rib_end_radius(i)), " mm"));
 if (flat_layout)
     echo(str("Deska žeber ", mm(sheet_ribs_width()), " × ", mm(sheet_ribs_height()),
         " mm, řada prstenců široká ", mm(rings_width()), " mm"));
@@ -770,12 +787,41 @@ module assembled() {
                         ring_2d(i);
 }
 
+mark_color = "#1d4e89";
+
 // Značka středu. Tenká, bez kerfu, ať průsečík sedí na ose kruhu.
 module center_cross() {
-    color("#222222") {
+    color(mark_color) {
         square([10, 1], center = true);
         square([1, 10], center = true);
     }
+}
+
+// Čárky na kružnici, kde po úplném zasunutí končí vnitřní hrana žebra.
+module seat_marks(i) {
+    r = rib_end_radius(i);
+    dash = 2.5;
+    gap = 6;
+    n = max(8, round(6.2831853 * r / (dash + gap)));
+    for (k = [0:n - 1])
+        rotate(k * 360 / n)
+            translate([r, 0])
+                square([0.7, dash], center = true);
+}
+
+module ring_on_sheet(i) {
+    difference() {
+        laser_cut()
+            ring_2d(i);
+        if (mark_centers) {
+            seat_marks(i);
+            if (ring_solid(i))
+                center_cross();
+        }
+    }
+    // U věnce leží kříž v díře. U plného je vyříznutý nahoře.
+    if (mark_centers && !ring_solid(i))
+        center_cross();
 }
 
 module flat_sheet() {
@@ -787,30 +833,10 @@ module flat_sheet() {
             laser_cut()
                 rib_2d();
 
-    ring_y = show_ribs()
-        ? sheet_ribs_height() - sheet_margin + part_gap
-        : sheet_margin;
     if (show_rings())
-        for (i = [0:center_count - 1]) {
-            place_r = ring_outer_radius(i);
-            previous = i == 0 ? 0 : [for (k = [0:i - 1]) 2 * ring_outer_radius(k) + part_gap] * [for (k = [0:i - 1]) 1];
-            translate([
-                sheet_margin + place_r + previous,
-                ring_y + place_r
-            ])
-                if (mark_centers && ring_solid(i))
-                    difference() {
-                        laser_cut()
-                            ring_2d(i);
-                        center_cross();
-                    }
-                else {
-                    laser_cut()
-                        ring_2d(i);
-                    if (mark_centers)
-                        center_cross();
-                }
-        }
+        for (i = [0:center_count - 1])
+            translate([ring_place_x(i), ring_place_y(i)])
+                ring_on_sheet(i);
 }
 
 if (flat_layout)
