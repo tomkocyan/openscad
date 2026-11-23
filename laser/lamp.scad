@@ -56,6 +56,9 @@ show_parts = "oboji"; // [zebra, rafky, oboji]
 // Žebro je tam jen jedno, jsou všechna stejná. Ráfky jsou všechny, liší se.
 flat_layout = false;
 
+// Křížek 10 mm ve středu každého kruhu na desce. Vypni, když značky nechceš.
+mark_centers = true;
+
 /* [Hidden] */
 // [výška, vnější poloměr] odspodu. Customizer seznamy přepisuje, proto je profil skrytý.
 profile = [
@@ -767,6 +770,14 @@ module assembled() {
                         ring_2d(i);
 }
 
+// Značka středu. Tenká, bez kerfu, ať průsečík sedí na ose kruhu.
+module center_cross() {
+    color("#222222") {
+        square([10, 1], center = true);
+        square([1, 10], center = true);
+    }
+}
+
 module flat_sheet() {
     if (show_ribs())
         translate([
@@ -787,8 +798,18 @@ module flat_sheet() {
                 sheet_margin + place_r + previous,
                 ring_y + place_r
             ])
-                laser_cut()
-                    ring_2d(i);
+                if (mark_centers && ring_solid(i))
+                    difference() {
+                        laser_cut()
+                            ring_2d(i);
+                        center_cross();
+                    }
+                else {
+                    laser_cut()
+                        ring_2d(i);
+                    if (mark_centers)
+                        center_cross();
+                }
         }
 }
 
