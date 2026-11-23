@@ -6,7 +6,7 @@
 //
 // Profil i středy se upravují tady v souboru, ne v Customizeru.
 // Profil je [výška, poloměr] odspodu, výšky musí růst. Způsob křivky je v Customizeru.
-// Střed je [výška, zapuštění, plný]. Zapuštění je celá hloubka spoje, půl a půl.
+// Střed je [výška, zapuštění, plný, šířka]. Šířka je ring_width, číslo jen když se liší.
 // Žebro má čtyři kulaté rohy, dva nahoře a dva dole.
 // Zapni rozložení a exportuj DXF nebo SVG. Vypni ho pro složený náhled.
 // Kerf a tloušťka jsou v settings.scad. Tady to neměň.
@@ -34,6 +34,12 @@ round_corners = true;
 // Poloměr těch čtyř rohů v mm. Nejvýš polovina hloubky žebra.
 corner_radius = 6; // [0:0.5:20]
 
+// Rohy profilu, které nejsou na konci žebra. U úseček se zakulatí obě hrany.
+round_bends = false;
+
+// Poloměr těch rohů v mm. Hladká křivka lomy nemá, tam se neprojeví.
+bend_radius = 8; // [0:0.5:40]
+
 /* [Rotace] */
 // Počet žeber kolem osy
 rib_count = 18; // [3:1:48]
@@ -41,11 +47,6 @@ rib_count = 18; // [3:1:48]
 // Natočení žeber ve stupních. 0 je kolmo, kladné je po směru hodin.
 // Lamely se točí kolem vnitřní hrany, ať mezi nimi není přímý průhled ven.
 rib_angle = 0; // [-75:1:75]
-
-/* [Středy] */
-// Radiální šířka věnce. U plného kotouče se nepoužije.
-// Musí být větší než polovina zapuštění, ať po zářezu věnec drží pohromadě.
-ring_width = 18; // [6:1:40]
 
 /* [Rozložení] */
 // Co kreslit: zebra, rafky, nebo oboji.
@@ -66,13 +67,13 @@ profile = [
 
 ];
 
-// [výška, zapuštění, plný kotouč]. Výška v mm odspodu.
-// Zapuštění je celá hloubka spoje: vnitřní půlku má žebro, vnější prstenec.
-// true = plný kotouč až do osy, false = věnec s dírou.
+// Šířka věnce v mm. U plného kotouče se nepoužije.
+// V poli ji nech jako ring_width a číslo napiš jen tam, kde má být jiná.
+ring_width = 18;
 centers = [
-    [20, 14, true],
-    [30, 14, false],
-    [100, 14, false]
+    [20, 14, true, ring_width],
+    [30, 14, false, ring_width],
+    [100, 14, false, ring_width]
 ];
 
 center_count = len(centers);
@@ -80,6 +81,7 @@ center_count = len(centers);
 function center_height(i) = centers[i][0];
 function center_notch(i) = centers[i][1];
 function ring_solid(i) = centers[i][2];
+function ring_width_of(i) = centers[i][3];
 
 function z_min() = profile[0][0];
 function z_max() = profile[len(profile) - 1][0];
@@ -322,7 +324,7 @@ function tangent_up(z) = v_unit([radius_deriv(z), 1]);
 function rib_kolmo() = rib_measure == "kolmo";
 
 // Vnitřní hrana. Vodorovně je to profil minus hloubka.
-// Kolmo je rovnoběžka k profilu, v rohu se sousední úseky potkají.
+// Kolmo je offset celé křivky o hloubku žebra.
 function inner_x(z) =
     rib_kolmo() ? band_x(inner_band, z) : radius_at(z) - rib_depth;
 
@@ -403,10 +405,50 @@ function used_corner_radius() =
 function v_len(a) = sqrt(a * a);
 function v_unit(a) = a / max(v_len(a), 0.001);
 
+function profile_xy() =
+    [for (i = [0:len(profile) - 1]) [profile[i][1], profile[i][0]]];
+
+// Oblouk místo ostrého lomu. Když se na úsečku nevejde, zmenší se.
+function bend_arc(prev, here, next) =
+    let(
+        d1 = v_unit(here - prev),
+        d2 = v_unit(next - here),
+        dot = min(1, max(-1, d1 * d2)),
+        delta = acos(dot),
+        room = min(v_len(here - prev), v_len(next - here)) * 0.45,
+        back = min(bend_radius * tan(min(delta, 160) / 2), room)
+    )
+    delta < 8 || back < 0.3 ? [here]
+    : let(
+        p0 = here - d1 * back,
+        p1 = here + d2 * back,
+        turn = d1[0] * d2[1] - d1[1] * d2[0],
+        n = turn >= 0 ? [-d1[1], d1[0]] : [d1[1], -d1[0]],
+        rad = back / tan(delta / 2),
+        center = p0 + n * rad
+    )
+    fillet_arc(center, rad, p0, p1, here);
+
+function fillet_poly(pts) =
+    let(n = len(pts))
+    n < 3 ? pts
+    : concat(
+        [pts[0]],
+        [for (i = [1:n - 2]) each bend_arc(pts[i - 1], pts[i], pts[i + 1])],
+        [pts[n - 1]]
+    );
+
+function bends_on() = round_bends && bend_radius > 0.05 && curve_name() == "usecky";
+
+function outer_pts() =
+    curve_name() == "usecky"
+        ? (bends_on() ? fillet_poly(profile_xy()) : profile_xy())
+        : [for (i = [0:profile_steps - 1]) [radius_at(sample_z(i)), sample_z(i)]];
+
 function seg_tan(a, b) = v_unit(b - a);
 function seg_inward(t) = [-t[1], t[0]];
 
-// Průsečík rovnoběžky s vodorovným koncem žebra.
+// Konec rovnoběžky oříznutý vodorovným koncem žebra.
 function cap_point(a, b, z_cap, dist) =
     let(
         t = seg_tan(a, b),
@@ -415,7 +457,7 @@ function cap_point(a, b, z_cap, dist) =
     )
     [p[0] + t[0] * s, z_cap];
 
-// Roh rovnoběžky. Osa úhlu, zkrácená když by hrot utekl.
+// Ostrý vnitřní roh. Úsečky se lomí na obou stranách stejně.
 function miter_point(prev, here, next, dist) =
     let(
         n0 = seg_inward(seg_tan(prev, here)),
@@ -428,64 +470,21 @@ function miter_point(prev, here, next, dist) =
         ? here + n0 * dist
         : here + bis * min(dist / denom, dist * 4);
 
-function outer_pts() =
-    curve_name() == "usecky"
-        ? [for (i = [0:len(profile) - 1]) [profile[i][1], profile[i][0]]]
-        : [for (i = [0:profile_steps - 1]) [radius_at(sample_z(i)), sample_z(i)]];
-
-// Bod posunutý o hloubku kolmo k profilu.
-function offset_at(z) =
-    let(t = tangent_up(z), n = [-t[1], t[0]])
-    [radius_at(z), z] + n * rib_depth;
-
-// V ostrém ohybu by rovnoběžka prošla dovnitř pásu a vykousla díru.
-function gap_at(p, i, best) =
-    i >= profile_steps ? best
-    : gap_at(
-        p,
-        i + 1,
-        min(best, v_len(p - [radius_at(sample_z(i)), sample_z(i)]))
+function miter_band() =
+    let(o = profile_xy(), n = len(o), d = rib_depth)
+    concat(
+        [cap_point(o[0], o[1], z_min(), d)],
+        [for (i = [1:n - 2]) miter_point(o[i - 1], o[i], o[i + 1], d)],
+        [cap_point(o[n - 2], o[n - 1], z_max(), d)]
     );
 
-function on_inner(p) = gap_at(p, 0, 1e9) > rib_depth - 1;
+// Nejlevější bod kružnice o poloměru hloubky žebra. Mimo výšku kružnice nic.
+function cover_left(c, z) =
+    let(dy = z - c[1], h2 = rib_depth * rib_depth - dy * dy)
+    h2 <= 0 ? 1e9 : c[0] - sqrt(h2);
 
-function line_at_z(a, b, z) =
-    let(dz = b[1] - a[1])
-    abs(dz) < 0.001 ? [a[0], z] : [a[0] + (b[0] - a[0]) * (z - a[1]) / dz, z];
-
-// Vyhodí body, které se v ohybu vracejí a kříží obrys.
-function rising(pts, i, acc) =
-    i >= len(pts) ? acc
-    : let(p = pts[i])
-    p[1] >= acc[len(acc) - 1][1] - 0.2
-        ? rising(pts, i + 1, concat(acc, [p]))
-        : rising(pts, i + 1, acc);
-
-function inner_pts() =
-    curve_name() == "usecky"
-        ? let(o = outer_pts(), n = len(o), d = rib_depth)
-            concat(
-                [cap_point(o[0], o[1], z_min(), d)],
-                [for (i = [1:n - 2]) miter_point(o[i - 1], o[i], o[i + 1], d)],
-                [cap_point(o[n - 2], o[n - 1], z_max(), d)]
-            )
-        : let(
-            raw = [
-                for (i = [0:profile_steps - 1])
-                    let(p = offset_at(sample_z(i)))
-                    if (on_inner(p)) p
-            ],
-            mid = rising(raw, 1, [raw[0]]),
-            a = mid[0],
-            b = mid[1],
-            c = mid[len(mid) - 2],
-            d0 = mid[len(mid) - 1]
-        )
-        concat(
-            [line_at_z(a, b, z_min())],
-            [for (p = mid) if (p[1] > z_min() + 0.05 && p[1] < z_max() - 0.05) p],
-            [line_at_z(c, d0, z_max())]
-        );
+// Offset křivky: v dané výšce nejlevější bod, který je od profilu přesně o hloubku.
+function envelope_x(z, pts) = min([for (c = pts) cover_left(c, z)]);
 
 function band_hit(pts, z, i) =
     i >= len(pts) - 2 ? i
@@ -516,7 +515,18 @@ function ang_diff(a, b) =
 
 function mm(n) = round(n * 10) / 10;
 
-inner_band = rib_kolmo() ? inner_pts() : [];
+// Husté vzorky křivky, ať offset v ohybu nevyjde jako úsečka.
+offset_count = max(profile_steps, ceil(profile_height()));
+offset_pts = [
+    for (i = [0:offset_count])
+        let(z = z_min() + profile_height() * i / offset_count)
+        [radius_at(z), z]
+];
+// Úsečky mají ostrý offset. Hladká křivka má obloukový, ať vnitřek nezůstane lomený.
+inner_band = !rib_kolmo() ? []
+    : curve_name() == "usecky"
+        ? (bends_on() ? fillet_poly(miter_band()) : miter_band())
+        : [for (p = offset_pts) [envelope_x(p[1], offset_pts), p[1]]];
 
 assert(len(profile) >= 2, "Profil potřebuje aspoň dva body");
 assert(profile_steps >= 2, "Křivka profilu potřebuje aspoň dva kroky");
@@ -535,9 +545,9 @@ for (i = [0:center_count - 1]) {
     assert(center_notch(i) > 0 && center_notch(i) < rib_depth,
         str("Zapuštění středu ", i + 1, " musí být menší než hloubka žebra"));
     if (!ring_solid(i)) {
-        assert(ring_width > center_notch(i) / 2,
+        assert(ring_width_of(i) > center_notch(i) / 2,
             str("Prstenec ", i + 1, " je užší než polovina zapuštění a rozpadl by se"));
-        assert(ring_outer_radius(i) > ring_width,
+        assert(ring_outer_radius(i) > ring_width_of(i),
             str("Prstenec ", i + 1, " je širší než jeho poloměr"));
     }
     assert(
@@ -567,6 +577,8 @@ echo(str("Žebro na desce ", mm(rib_span_x()), " × ", mm(profile_height()),
     rib_kolmo() ? "kolmo na profil" : "vodorovně"));
 if (round_corners)
     echo(str("Zakulacení rohů: ", mm(corner_r), " mm"));
+if (bends_on())
+    echo(str("Zakulacení lomů profilu: ", mm(bend_radius), " mm"));
 if (round_corners && corner_radius > corner_r + 0.05)
     echo(str("Varování: poloměr rohů je zkrácený na ", mm(corner_r),
         " mm, ať se rohy na konci žebra neslijí."));
@@ -574,7 +586,7 @@ for (i = [0:center_count - 1])
     echo(str("Střed ", i + 1, ": výška ", mm(center_height(i)),
         " mm, průměr ", mm(2 * ring_outer_radius(i)),
         " mm, zapuštění ", mm(center_notch(i)),
-        " mm, ", ring_solid(i) ? "plný" : "věnec"));
+        " mm, ", ring_solid(i) ? "plný" : str("věnec ", mm(ring_width_of(i)), " mm")));
 if (flat_layout)
     echo(str("Deska žeber ", mm(sheet_ribs_width()), " × ", mm(sheet_ribs_height()),
         " mm, řada prstenců široká ", mm(rings_width()), " mm"));
@@ -722,7 +734,7 @@ module ring_slot(i) {
 
 module ring_2d(i) {
     outer_r = ring_outer_radius(i);
-    inner_r = outer_r - ring_width;
+    inner_r = outer_r - ring_width_of(i);
     difference() {
         circle(r = outer_r, $fn = 96);
         if (!ring_solid(i))

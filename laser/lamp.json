@@ -1,7 +1,6 @@
 {
     "parameterSets": {
         "design default values": {
-            "centers": "[[20, 14, true], [30, 14, false], [100, 14, false]]",
             "corner_radius": "6",
             "flat_layout": "false",
             "profile": "[[0, 50], [20, 70], [50, 100], [80, 60], [150, 50]]",
@@ -11,7 +10,6 @@
             "rib_count": "18",
             "rib_depth": "20",
             "rib_measure": "kolmo",
-            "ring_width": "18",
             "round_corners": "true",
             "show_parts": "oboji"
         }
